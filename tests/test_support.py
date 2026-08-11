@@ -1,5 +1,7 @@
-from fastapi.testclient import TestClient
 from unittest.mock import patch
+
+from fastapi.testclient import TestClient
+
 from app.main import app
 
 
@@ -31,6 +33,7 @@ def test_rejects_short_support_message() -> None:
     )
 
     assert response.status_code == 422
+
 
 def test_create_ai_support_reply() -> None:
     with patch(
