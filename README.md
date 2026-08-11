@@ -20,3 +20,13 @@ source .venv/bin/activate
 ```bash
 python -m pytest -v
 ```
+
+## Environment configuration
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+Replace placeholder values in `.env` with local secrets. Never commit `.env`.
