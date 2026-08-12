@@ -14,7 +14,15 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    docker-build:
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Build Docker image
+        run: docker build -t ai-support-assistant:ci .
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
