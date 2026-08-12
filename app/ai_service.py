@@ -14,6 +14,9 @@ def generate_support_reply(
     message: str,
     client: OpenAI | None = None,
 ) -> str:
+    if client is None and not settings.openai_api_key:
+        raise ValueError("OPENAI_API_KEY is required")
+
     openai_client = client or OpenAI(api_key=settings.openai_api_key)
 
     response = openai_client.responses.create(
