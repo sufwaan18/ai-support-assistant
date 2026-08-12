@@ -1,7 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
+
 from app.ai_service import generate_support_reply
 from app.models import SupportRequest, SupportResponse
-
 
 app = FastAPI(
     title="AI Support Assistant",
@@ -23,10 +23,16 @@ def create_support_request(request: SupportRequest) -> dict[str, str]:
 
 @app.post("/support/reply", response_model=SupportResponse)
 def create_support_reply(request: SupportRequest) -> SupportResponse:
-    reply = generate_support_reply(
-        subject=request.subject,
-        message=request.message,
-    )
+    try:
+        reply = generate_support_reply(
+            subject=request.subject,
+            message=request.message,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service is not configured",
+        ) from error
 
     return SupportResponse(
         status="completed",

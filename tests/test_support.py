@@ -58,3 +58,21 @@ def test_create_ai_support_reply() -> None:
         subject="Cannot reset password",
         message="The password reset email never arrives.",
     )
+
+def test_ai_support_reply_without_api_key_returns_503() -> None:
+    with patch(
+        "app.main.generate_support_reply",
+        side_effect=ValueError("OPENAI_API_KEY is required"),
+    ):
+        response = client.post(
+            "/support/reply",
+            json={
+                "subject": "Cannot reset password",
+                "message": "The password reset email never arrives.",
+            },
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "AI service is not configured",
+    }
