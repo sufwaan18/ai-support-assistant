@@ -3,11 +3,17 @@ from fastapi import FastAPI, HTTPException, status
 from app.ai_service import generate_support_reply
 from app.models import SupportRequest, SupportResponse
 
+from app.logging_config import configure_logging
+from app.middleware import RequestLoggingMiddleware
+
+configure_logging()
+
 app = FastAPI(
     title="AI Support Assistant",
     version="0.1.0",
 )
 
+app.add_middleware(RequestLoggingMiddleware)
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
