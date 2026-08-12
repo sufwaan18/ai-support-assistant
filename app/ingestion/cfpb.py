@@ -1,7 +1,6 @@
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict, Field
-
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 import csv
 import json
 from pathlib import Path
@@ -18,6 +17,11 @@ class CFPBComplaint(BaseModel):
     narrative: str = Field(min_length=20)
     company: str = Field(min_length=1)
     state: str | None = Field(default=None, min_length=2, max_length=2)
+
+class RejectedComplaint(BaseModel):
+    row_number: int = Field(ge=2)
+    complaint_id: str | None = None
+    error: str
 
 def transform_complaint(raw: dict[str, str]) -> CFPBComplaint:
     return CFPBComplaint(
@@ -52,3 +56,26 @@ def write_complaints_jsonl(
         for complaint in complaints:
             record = complaint.model_dump(mode="json")
             output_file.write(json.dumps(record) + "\n")
+
+def load_complaints_csv_with_report(
+    input_path: Path,
+) -> tuple[list[CFPBComplaint], list[RejectedComplaint]]:
+    complaints: list[CFPBComplaint] = []
+    rejected: list[RejectedComplaint] = []
+
+    with input_path.open(encoding="utf-8-sig", newline="") as csv_file:
+        reader = csv.DictReader(csv_file)
+
+        for row_number, raw in enumerate(reader, start=2):
+            try:
+                complaints.append(transform_complaint(raw))
+            except (KeyError, ValidationError) as error:
+                rejected.append(
+                    RejectedComplaint(
+                        row_number=row_number,
+                        complaint_id=raw.get("Complaint ID") or None,
+                        error=str(error),
+                    )
+                )
+
+    return complaints, rejected

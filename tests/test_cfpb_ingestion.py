@@ -2,6 +2,8 @@ from datetime import date
 from pathlib import Path
 from app.ingestion.cfpb import (
     CFPBComplaint,
+    RejectedComplaint,
+    load_complaints_csv_with_report,
     write_complaints_jsonl,
     load_complaints_csv,
     transform_complaint,
@@ -92,3 +94,24 @@ def test_write_complaints_jsonl(tmp_path: Path) -> None:
 
     assert '"complaint_id": "2001"' in output
     assert '"date_received": "2026-03-02"' in output
+
+def test_load_complaints_csv_reports_invalid_rows(tmp_path: Path) -> None:
+    csv_path = tmp_path / "complaints.csv"
+    csv_path.write_text(
+        "Complaint ID,Date received,Product,Issue,Sub-issue,"
+        "Consumer complaint narrative,Company,State\n"
+        "1001,2026-03-01,Credit card,Billing problem,,"
+        "The bank charged my account twice for the same purchase,"
+        "Example Bank,TX\n"
+        "1002,2026-03-02,Credit card,Billing problem,,"
+        "Too short,Example Bank,CA\n",
+        encoding="utf-8",
+    )
+
+    complaints, rejected = load_complaints_csv_with_report(csv_path)
+
+    assert len(complaints) == 1
+    assert complaints[0].complaint_id == "1001"
+    assert len(rejected) == 1
+    assert rejected[0].row_number == 3
+    assert rejected[0].complaint_id == "1002"
