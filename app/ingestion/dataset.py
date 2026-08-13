@@ -5,11 +5,17 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from app.ingestion.downloader import (
-    download_cfpb_dataset,
-    extract_cfpb_csv,
+from app.ingestion.downloader import download_cfpb_dataset
+from app.ingestion.pipeline import (
+    ProcessingSummary,
+    process_cfpb_zip,
 )
-from app.ingestion.pipeline import ProcessingSummary, process_cfpb_csv
+
+
+CFPB_SOURCE_URL = (
+    "https://files.consumerfinance.gov/"
+    "ccdb/complaints.csv.zip"
+)
 
 
 class DatasetManifest(BaseModel):
@@ -25,7 +31,10 @@ def calculate_sha256(file_path: Path) -> str:
     digest = hashlib.sha256()
 
     with file_path.open("rb") as input_file:
-        for chunk in iter(lambda: input_file.read(1024 * 1024), b""):
+        for chunk in iter(
+            lambda: input_file.read(1024 * 1024),
+            b"",
+        ):
             digest.update(chunk)
 
     return digest.hexdigest()
@@ -60,27 +69,20 @@ def build_cfpb_dataset(
     processed_directory = working_directory / "processed"
 
     archive_path = raw_directory / "complaints.csv.zip"
-    csv_path = raw_directory / "extracted" / "complaints.csv"
     output_path = processed_directory / "complaints.jsonl"
     manifest_path = processed_directory / "manifest.json"
 
-    download_cfpb_dataset(archive_path)
-    extracted_path = extract_cfpb_csv(
-        archive_path,
-        csv_path.parent,
-    )
+    if not archive_path.is_file():
+        download_cfpb_dataset(archive_path)
 
-    summary = process_cfpb_csv(
-        extracted_path,
-        output_path,
+    summary = process_cfpb_zip(
+        archive_path=archive_path,
+        output_path=output_path,
         max_records=max_records,
     )
 
     manifest = DatasetManifest(
-        source_url=(
-            "https://files.consumerfinance.gov/"
-            "ccdb/complaints.csv.zip"
-        ),
+        source_url=CFPB_SOURCE_URL,
         created_at=datetime.now(UTC),
         maximum_records=max_records,
         output_file=str(output_path),
