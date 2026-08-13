@@ -1,34 +1,57 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status
 
 from app.ai_service import generate_support_reply
-from app.models import SupportRequest, SupportResponse
-
+from app.embeddings import TextEncoder
 from app.logging_config import configure_logging
 from app.middleware import RequestLoggingMiddleware
+from app.models import (
+    RAGSupportResponse,
+    SupportRequest,
+    SupportResponse,
+)
+from app.rag_dependencies import (
+    get_rag_collection,
+    get_rag_encoder,
+)
+from app.rag_service import (
+    RAG_DISCLAIMER,
+    generate_grounded_support_reply,
+)
+from app.vector_store import CollectionProtocol
+
 
 configure_logging()
 
 app = FastAPI(
     title="AI Support Assistant",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 app.add_middleware(RequestLoggingMiddleware)
+
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
     return {"status": "healthy"}
 
+
 @app.post("/support", status_code=202)
-def create_support_request(request: SupportRequest) -> dict[str, str]:
+def create_support_request(
+    request: SupportRequest,
+) -> dict[str, str]:
     return {
         "status": "received",
         "subject": request.subject,
     }
 
 
-@app.post("/support/reply", response_model=SupportResponse)
-def create_support_reply(request: SupportRequest) -> SupportResponse:
+@app.post(
+    "/support/reply",
+    response_model=SupportResponse,
+)
+def create_support_reply(
+    request: SupportRequest,
+) -> SupportResponse:
     try:
         reply = generate_support_reply(
             subject=request.subject,
@@ -44,4 +67,37 @@ def create_support_reply(request: SupportRequest) -> SupportResponse:
         status="completed",
         subject=request.subject,
         reply=reply,
+    )
+
+
+@app.post(
+    "/rag/support",
+    response_model=RAGSupportResponse,
+)
+def create_rag_support_reply(
+    request: SupportRequest,
+    encoder: TextEncoder = Depends(get_rag_encoder),
+    collection: CollectionProtocol = Depends(
+        get_rag_collection
+    ),
+) -> RAGSupportResponse:
+    try:
+        reply, sources = generate_grounded_support_reply(
+            subject=request.subject,
+            message=request.message,
+            encoder=encoder,
+            collection=collection,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="RAG service is not configured",
+        ) from error
+
+    return RAGSupportResponse(
+        status="completed",
+        subject=request.subject,
+        reply=reply,
+        sources=sources,
+        disclaimer=RAG_DISCLAIMER,
     )
