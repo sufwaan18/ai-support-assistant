@@ -10,3 +10,20 @@ class SupportResponse(BaseModel):
     status: str
     subject: str
     reply: str
+
+
+class RAGSource(BaseModel):
+    complaint_id: str = Field(min_length=1)
+    product: str
+    issue: str
+    company: str | None = None
+    date_received: str | None = None
+    distance: float = Field(ge=0)
+
+
+class RAGSupportResponse(BaseModel):
+    status: str
+    subject: str
+    reply: str
+    sources: list[RAGSource]
+    disclaimer: str
