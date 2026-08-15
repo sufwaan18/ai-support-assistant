@@ -1,6 +1,5 @@
 from functools import lru_cache
-from pathlib import Path
-
+from app.config import settings
 from app.embeddings import (
     SentenceTransformerEncoder,
     TextEncoder,
@@ -18,6 +17,6 @@ def get_rag_encoder() -> TextEncoder:
 
 @lru_cache
 def get_rag_collection() -> CollectionProtocol:
-    return create_persistent_collection(
-        Path("data/chroma")
+        return create_persistent_collection(
+        settings.rag_database_directory
     )
