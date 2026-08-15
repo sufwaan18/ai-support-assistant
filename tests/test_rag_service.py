@@ -1,12 +1,15 @@
 from collections.abc import Sequence
 from types import SimpleNamespace
 from typing import Any
-
+import pytest
+from app.models import RAGSource
 from app.rag_service import (
+    CitationIntegrityError,
     RAG_DISCLAIMER,
     create_rag_sources,
     format_retrieval_context,
     generate_grounded_support_reply,
+    validate_reply_citations,
 )
 from app.vector_store import RetrievedComplaint
 
@@ -147,3 +150,27 @@ def test_generate_grounded_support_reply() -> None:
     assert client.responses.instructions is not None
     assert "not verified facts" in client.responses.instructions
     assert "not verified facts" in RAG_DISCLAIMER
+
+def test_rejects_citation_not_present_in_sources() -> None:
+    sources = [
+        RAGSource(
+            complaint_id="1001",
+            product="Credit card",
+            issue="Billing problem",
+            company="Example Bank",
+            date_received="2026-03-01",
+            distance=0.1,
+        )
+    ]
+
+    with pytest.raises(
+        CitationIntegrityError,
+        match="were not retrieved",
+    ):
+        validate_reply_citations(
+            reply=(
+                "Contact the bank "
+                "[CFPB complaint ID: invented-9999]."
+            ),
+            sources=sources,
+        )

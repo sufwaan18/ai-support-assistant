@@ -15,6 +15,7 @@ from app.rag_dependencies import (
 )
 from app.rag_service import (
     RAG_DISCLAIMER,
+    CitationIntegrityError,
     generate_grounded_support_reply,
 )
 from app.security import require_api_key
@@ -59,6 +60,7 @@ def create_support_reply(
             subject=request.subject,
             message=request.message,
         )
+
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -96,6 +98,13 @@ def create_rag_support_reply(
             encoder=encoder,
             collection=collection,
         )
+
+    except CitationIntegrityError as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI response failed citation validation",
+        ) from error
+
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from typing import Any
-
+from app.rag_service import CitationIntegrityError
 from fastapi.testclient import TestClient
 
 import app.main as main_module
@@ -98,3 +98,46 @@ def test_create_rag_support_reply(
     assert body["status"] == "completed"
     assert body["sources"][0]["complaint_id"] == "1001"
     assert "general customer-support" in body["disclaimer"]
+
+def test_rag_citation_failure_returns_502(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.setattr(
+        "app.security.settings.app_api_key",
+        "test-app-api-key",
+    )
+
+    def fake_generate(
+        **kwargs: Any,
+    ) -> tuple[str, list[RAGSource]]:
+        raise CitationIntegrityError(
+            "AI reply cited complaint IDs that were not retrieved"
+        )
+
+    monkeypatch.setattr(
+        main_module,
+        "generate_grounded_support_reply",
+        fake_generate,
+    )
+    app.dependency_overrides[get_rag_encoder] = FakeEncoder
+    app.dependency_overrides[get_rag_collection] = FakeCollection
+
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/rag/support",
+            headers={"X-API-Key": "test-app-api-key"},
+            json={
+                "subject": "Duplicate card charge",
+                "message": (
+                    "The same purchase appears twice on my statement."
+                ),
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 502
+    assert response.json() == {
+        "detail": "AI response failed citation validation",
+    }

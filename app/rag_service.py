@@ -1,4 +1,5 @@
 from openai import OpenAI
+import re
 
 from app.config import settings
 from app.embeddings import TextEncoder
@@ -32,6 +33,33 @@ RAG_DISCLAIMER = (
     "are not verified facts, legal advice, or financial advice."
 )
 
+CITATION_PATTERN = re.compile(
+    r"\[CFPB complaint ID:\s*([^\]]+)\]"
+)
+
+
+class CitationIntegrityError(RuntimeError):
+    """Raised when an AI reply cites a source that was not retrieved."""
+
+
+def validate_reply_citations(
+    reply: str,
+    sources: list[RAGSource],
+) -> None:
+    cited_ids = {
+        complaint_id.strip()
+        for complaint_id in CITATION_PATTERN.findall(reply)
+    }
+    source_ids = {
+        source.complaint_id
+        for source in sources
+    }
+    unsupported_ids = cited_ids - source_ids
+
+    if unsupported_ids:
+        raise CitationIntegrityError(
+            "AI reply cited complaint IDs that were not retrieved"
+        )
 
 def format_retrieval_context(
     complaints: list[RetrievedComplaint],
@@ -105,4 +133,7 @@ def generate_grounded_support_reply(
         ),
     )
 
-    return response.output_text, create_rag_sources(complaints)
+    sources = create_rag_sources(complaints)
+    validate_reply_citations(response.output_text, sources)
+
+    return response.output_text, sources
