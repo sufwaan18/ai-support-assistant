@@ -1,5 +1,6 @@
 from unittest.mock import patch
-
+import httpx
+from openai import RateLimitError
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -88,4 +89,41 @@ def test_ai_support_reply_without_openai_key_returns_503(
     assert response.status_code == 503
     assert response.json() == {
         "detail": "AI service is not configured",
+    }
+def test_ai_support_reply_rate_limit_returns_503(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.security.settings.app_api_key",
+        "test-app-api-key",
+    )
+    upstream_response = httpx.Response(
+        status_code=429,
+        request=httpx.Request(
+            "POST",
+            "https://api.openai.com/v1/responses",
+        ),
+    )
+    error = RateLimitError(
+        "API quota exceeded",
+        response=upstream_response,
+        body={"error": {"code": "insufficient_quota"}},
+    )
+
+    with patch(
+        "app.main.generate_support_reply",
+        side_effect=error,
+    ):
+        response = client.post(
+            "/support/reply",
+            headers=AUTH_HEADERS,
+            json={
+                "subject": "Cannot reset password",
+                "message": "The password reset email never arrives.",
+            },
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "AI service is temporarily unavailable",
     }
