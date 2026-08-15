@@ -17,6 +17,7 @@ from app.rag_service import (
     RAG_DISCLAIMER,
     generate_grounded_support_reply,
 )
+from app.security import require_api_key
 from app.vector_store import CollectionProtocol
 
 
@@ -51,6 +52,7 @@ def create_support_request(
 )
 def create_support_reply(
     request: SupportRequest,
+    _: None = Depends(require_api_key),
 ) -> SupportResponse:
     try:
         reply = generate_support_reply(
@@ -76,6 +78,7 @@ def create_support_reply(
 )
 def create_rag_support_reply(
     request: SupportRequest,
+    _: None = Depends(require_api_key),
     encoder: TextEncoder = Depends(get_rag_encoder),
     collection: CollectionProtocol = Depends(
         get_rag_collection

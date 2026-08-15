@@ -71,11 +71,17 @@ Open `.env` and replace the placeholder API key:
 
 ```dotenv
 ENVIRONMENT=development
+APP_API_KEY=replace-with-a-long-random-value
 OPENAI_API_KEY=replace-with-your-key
 OPENAI_MODEL=gpt-5.6-luna
 ```
 
-Never commit `.env` or expose a real API key in source code, screenshots, logs, or GitHub.
+`APP_API_KEY` protects endpoints that can consume paid AI resources. Clients
+must send this value in the `X-API-Key` request header. Use a different,
+random value for each deployed environment.
+
+Never commit `.env` or expose a real API key in source code, screenshots,
+logs, or GitHub.
 
 ## Run locally
 
@@ -141,6 +147,7 @@ Example response:
 
 ```http
 POST /support/reply
+X-API-Key: your-application-api-key
 ```
 
 Example request:
@@ -163,6 +170,8 @@ Example response:
 ```
 
 This endpoint may use OpenAI API credits when called without a mocked client.
+Requests with a missing or incorrect application API key receive `401
+Unauthorized`.
 
 ## Run tests
 

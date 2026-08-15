@@ -47,6 +47,10 @@ class FakeCollection:
 def test_create_rag_support_reply(
     monkeypatch: Any,
 ) -> None:
+    monkeypatch.setattr(
+        "app.security.settings.app_api_key",
+        "test-app-api-key",
+    )
     def fake_generate(
         **kwargs: Any,
     ) -> tuple[str, list[RAGSource]]:
@@ -76,6 +80,7 @@ def test_create_rag_support_reply(
     client = TestClient(app)
     response = client.post(
         "/rag/support",
+        headers={"X-API-Key": "test-app-api-key"},
         json={
             "subject": "Duplicate card charge",
             "message": (
