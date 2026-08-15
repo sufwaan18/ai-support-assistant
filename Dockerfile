@@ -14,10 +14,14 @@ RUN addgroup --system appgroup \
 COPY requirements.txt .
 
 RUN python -m pip install --upgrade pip \
+    && python -m pip install \
+        --index-url https://download.pytorch.org/whl/cpu \
+        torch==2.13.0 \
     && python -m pip install -r requirements.txt
 
 COPY app ./app
-
+RUN mkdir -p /app/data \
+    && chown -R appuser:appgroup /app/data
 USER appuser
 
 EXPOSE 8000

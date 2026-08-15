@@ -1,6 +1,11 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, HTTPException, status
 from openai import RateLimitError
+
 from app.ai_service import generate_support_reply
+from app.config import settings
 from app.embeddings import TextEncoder
 from app.logging_config import configure_logging
 from app.middleware import RequestLoggingMiddleware
@@ -14,19 +19,29 @@ from app.rag_dependencies import (
     get_rag_encoder,
 )
 from app.rag_service import (
-    RAG_DISCLAIMER,
     CitationIntegrityError,
+    RAG_DISCLAIMER,
     generate_grounded_support_reply,
 )
+from app.s3_bootstrap import bootstrap_rag_snapshot
 from app.security import require_api_key
 from app.vector_store import CollectionProtocol
 
 
-configure_logging()
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    bootstrap_rag_snapshot(
+        bucket=settings.rag_snapshot_s3_bucket,
+        key=settings.rag_snapshot_s3_key,
+        database_directory=settings.rag_database_directory,
+    )
+
+    yield
 
 app = FastAPI(
     title="AI Support Assistant",
     version="0.2.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(RequestLoggingMiddleware)
