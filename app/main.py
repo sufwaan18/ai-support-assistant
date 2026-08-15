@@ -1,5 +1,5 @@
 from fastapi import Depends, FastAPI, HTTPException, status
-
+from openai import RateLimitError
 from app.ai_service import generate_support_reply
 from app.embeddings import TextEncoder
 from app.logging_config import configure_logging
@@ -63,6 +63,11 @@ def create_support_reply(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI service is not configured",
+        ) from error
+    except RateLimitError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service is temporarily unavailable",
         ) from error
 
     return SupportResponse(
