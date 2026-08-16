@@ -1,14 +1,15 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-
 from fastapi import Depends, FastAPI, HTTPException, status
 from openai import RateLimitError
+
 
 from app.ai_service import generate_support_reply
 from app.config import settings
 from app.embeddings import TextEncoder
 from app.logging_config import configure_logging
 from app.middleware import RequestLoggingMiddleware
+from app.rate_limit import enforce_ai_rate_limit
 from app.models import (
     RAGSupportResponse,
     SupportRequest,
@@ -69,6 +70,7 @@ def create_support_request(
 def create_support_reply(
     request: SupportRequest,
     _: None = Depends(require_api_key),
+    _rate_limit: None = Depends(enforce_ai_rate_limit),
 ) -> SupportResponse:
     try:
         reply = generate_support_reply(
@@ -101,6 +103,7 @@ def create_support_reply(
 def create_rag_support_reply(
     request: SupportRequest,
     _: None = Depends(require_api_key),
+    _rate_limit: None = Depends(enforce_ai_rate_limit),
     encoder: TextEncoder = Depends(get_rag_encoder),
     collection: CollectionProtocol = Depends(
         get_rag_collection
