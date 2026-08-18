@@ -173,6 +173,21 @@ This endpoint may use OpenAI API credits when called without a mocked client.
 Requests with a missing or incorrect application API key receive `401
 Unauthorized`.
 
+## Evaluate answer quality
+
+Run the deterministic answer-quality evaluation:
+
+```bash
+python -m app.answer_evaluate_cli
+```
+
+The evaluation dataset includes both acceptable and deliberately defective
+answers. It measures groundedness, citation integrity, relevance, and safety,
+then writes a detailed report to
+`data/processed/answer_quality_evaluation.json`. The command does not call the
+OpenAI API, so it is safe to run locally and in continuous integration without
+API charges.
+
 ## Run tests
 
 ```bash
