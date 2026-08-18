@@ -12,6 +12,10 @@ class SupportResponse(BaseModel):
     reply: str
 
 
+class AccessCodeRequest(BaseModel):
+    code: str = Field(pattern=r"^\d{6}$")
+
+
 class RAGSource(BaseModel):
     complaint_id: str = Field(min_length=1)
     product: str
