@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+      name="description"
+      content="AI-powered financial support grounded in real CFPB complaint data."
+    >
+    <title>TyTus.ai | Financial Support Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <div class="live-background" aria-hidden="true">
+      <canvas id="neural-network"></canvas>
+      <span class="aurora aurora-one"></span>
+      <span class="aurora aurora-two"></span>
+      <span class="aurora aurora-three"></span>
+      <span class="crystal crystal-one"></span>
+      <span class="crystal crystal-two"></span>
+      <span class="light-grid"></span>
+    </div>
+    <div class="page-shell">
+      <section id="access-gate" class="access-gate" aria-labelledby="access-title">
+        <div class="gate-card">
+          <span class="gate-logo" aria-hidden="true">T</span>
+          <p class="eyebrow">PRIVATE DEMO ACCESS</p>
+          <h1 id="access-title">Enter your access code</h1>
+          <p>A six-digit invitation is required to open TyTus.ai.</p>
+          <form id="access-form">
+            <label class="sr-only" for="access-code">Six-digit access code</label>
+            <input
+              id="access-code"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              pattern="[0-9]{6}"
+              maxlength="6"
+              placeholder="000000"
+              required
+            >
+            <button type="submit">Open TyTus</button>
+          </form>
+          <p id="access-error" class="gate-error" role="alert" hidden></p>
+          <small>Codes expire five minutes after they are generated.</small>
+        </div>
+      </section>
+
+      <div id="chat-app" class="chat-app" hidden>
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="TyTus.ai home">
+          <span class="brand-mark" aria-hidden="true">
+            <i></i><i></i><i></i><b>T</b>
+          </span>
+          <span>TyTus<span class="brand-dot">.ai</span></span>
+        </a>
+        <button id="session-brand" class="session-brand" type="button" aria-label="Return to TyTus.ai home">
+          TyTus<span>.ai</span>
+        </button>
+        <div class="top-actions">
+          <button id="end-session" class="end-session" type="button">End session</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="hero" aria-labelledby="hero-title">
+          <p class="eyebrow">INTELLIGENCE THAT CONNECTS THE DOTS</p>
+          <h1 id="hero-title">How can <span>TyTus</span><br>help you?</h1>
+          <p class="hero-copy">
+            Ask about a banking or credit-card problem. TyTus searches real
+            consumer complaint patterns before composing a practical response.
+          </p>
+        </section>
+
+        <section id="chat-thread" class="conversation" aria-live="polite">
+          <div id="error-message" class="error-message" role="alert" hidden></div>
+        </section>
+
+        <section class="composer-section" aria-label="Ask TyTus">
+          <form id="support-form" class="composer">
+            <div class="message-row">
+              <label class="sr-only" for="message">Describe your issue</label>
+              <textarea
+                id="message"
+                name="message"
+                minlength="10"
+                maxlength="2000"
+                rows="2"
+                placeholder="How may I help you today?"
+                required
+              ></textarea>
+              <button id="submit-button" type="submit" aria-label="Send question">
+                <span>Ask TyTus</span>
+                <span aria-hidden="true">&#8593;</span>
+              </button>
+            </div>
+          </form>
+
+          <div class="suggestions" aria-label="Example questions">
+            <button type="button" data-message="The same purchase appears twice on my credit card statement. What should I do?">
+              Duplicate card charge
+            </button>
+            <button type="button" data-message="My checking account is frozen and I cannot access my money. What should I do next?">
+              Frozen bank account
+            </button>
+            <button type="button" data-message="My checking account has an unexpected monthly maintenance fee. How should I respond?">
+              Unexpected bank fee
+            </button>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <span>TyTus.ai &middot; AI Support Assistant</span>
+        <span>Responses are informational, not financial or legal advice.</span>
+      </footer>
+      </div>
+    </div>
+  </body>
+</html>

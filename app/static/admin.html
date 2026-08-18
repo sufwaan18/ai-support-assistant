@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>TyTus.ai | Access Codes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/admin.js" defer></script>
+  </head>
+  <body class="admin-body">
+    <div class="live-background" aria-hidden="true">
+      <span class="aurora aurora-one"></span>
+      <span class="aurora aurora-two"></span>
+      <span class="aurora aurora-three"></span>
+      <span class="crystal crystal-one"></span>
+      <span class="crystal crystal-two"></span>
+      <span class="light-grid"></span>
+    </div>
+    <main class="admin-card">
+      <span class="gate-logo" aria-hidden="true">T</span>
+      <p class="eyebrow">TYTUS.AI ADMIN</p>
+      <h1>Generate demo access</h1>
+      <p>Create a unique, one-time six-digit code. Its visitor session ends at the same five-minute expiration time.</p>
+      <label for="master-key">Master app key</label>
+      <input id="master-key" type="password" autocomplete="off" placeholder="Enter APP_API_KEY">
+      <button id="generate-code" type="button">Generate access code</button>
+      <section id="generated-code" class="generated-code" hidden>
+        <span>Your temporary code</span>
+        <strong id="code-value"></strong>
+        <small id="code-countdown">Valid for 5:00</small>
+      </section>
+      <p id="admin-error" class="gate-error" role="alert" hidden></p>
+      <a href="/">Return to TyTus.ai</a>
+    </main>
+  </body>
+</html>

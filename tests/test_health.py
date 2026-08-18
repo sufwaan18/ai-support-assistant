@@ -14,6 +14,14 @@ def test_health_check() -> None:
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
 
+
+def test_support_assistant_ui() -> None:
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "How can <span>TyTus</span>" in response.text
+    assert "/static/styles.css" in response.text
+
 def test_startup_bootstraps_rag_snapshot() -> None:
     with patch(
         "app.main.bootstrap_rag_snapshot"
