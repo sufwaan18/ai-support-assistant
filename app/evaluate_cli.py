@@ -3,10 +3,8 @@ import json
 from pathlib import Path
 
 from app.embeddings import SentenceTransformerEncoder
-from app.retrieval_evaluation import (
-    DEFAULT_EVALUATION_CASES,
-    evaluate_retrieval,
-)
+from app.evaluation_dataset import load_evaluation_cases
+from app.retrieval_evaluation import evaluate_retrieval
 from app.vector_store import (
     create_persistent_collection,
     search_complaints,
@@ -24,6 +22,12 @@ def create_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("data/chroma"),
         help="Persistent ChromaDB directory.",
+    )
+    parser.add_argument(
+        "--cases-file",
+        type=Path,
+        default=Path("evals/retrieval_cases.jsonl"),
+        help="Path to the JSONL retrieval evaluation dataset.",
     )
     parser.add_argument(
         "--limit",
@@ -46,6 +50,10 @@ def create_parser() -> argparse.ArgumentParser:
 def main() -> None:
     arguments = create_parser().parse_args()
 
+    evaluation_cases = load_evaluation_cases(
+        arguments.cases_file
+    )
+
     encoder = SentenceTransformerEncoder()
     collection = create_persistent_collection(
         arguments.database_directory
@@ -63,7 +71,7 @@ def main() -> None:
         )
 
     summary = evaluate_retrieval(
-        cases=DEFAULT_EVALUATION_CASES,
+        cases=evaluation_cases,
         search=search,
         limit=arguments.limit,
     )
@@ -72,23 +80,19 @@ def main() -> None:
         parents=True,
         exist_ok=True,
     )
+
+    serialized_summary = json.dumps(
+        summary.model_dump(mode="json"),
+        indent=2,
+        sort_keys=True,
+    )
+
     arguments.output.write_text(
-        json.dumps(
-            summary.model_dump(mode="json"),
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
+        serialized_summary + "\n",
         encoding="utf-8",
     )
 
-    print(
-        json.dumps(
-            summary.model_dump(mode="json"),
-            indent=2,
-            sort_keys=True,
-        )
-    )
+    print(serialized_summary)
 
 
 if __name__ == "__main__":

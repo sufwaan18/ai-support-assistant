@@ -51,8 +51,15 @@ def test_evaluate_retrieval_calculates_recall() -> None:
     assert summary.total_cases == 2
     assert summary.matched_cases == 1
     assert summary.recall_at_k == pytest.approx(0.5)
+    assert summary.mean_reciprocal_rank == pytest.approx(0.5)
+
     assert summary.results[0].matched is True
+    assert summary.results[0].first_relevant_rank == 1
+    assert summary.results[0].reciprocal_rank == pytest.approx(1.0)
+
     assert summary.results[1].matched is False
+    assert summary.results[1].first_relevant_rank is None
+    assert summary.results[1].reciprocal_rank == 0.0
 
 
 def test_evaluate_retrieval_handles_empty_cases() -> None:
@@ -65,6 +72,8 @@ def test_evaluate_retrieval_handles_empty_cases() -> None:
     assert summary.total_cases == 0
     assert summary.matched_cases == 0
     assert summary.recall_at_k == 0.0
+    assert summary.mean_reciprocal_rank == 0.0
+    assert summary.results == []
 
 
 def test_evaluate_retrieval_rejects_invalid_limit() -> None:
@@ -77,3 +86,37 @@ def test_evaluate_retrieval_rejects_invalid_limit() -> None:
             search=lambda query, limit: [],
             limit=0,
         )
+
+
+def test_evaluate_retrieval_calculates_rank_metrics() -> None:
+    cases = [
+        EvaluationCase(
+            query="duplicate credit card transaction",
+            expected_product="Credit card",
+        ),
+    ]
+
+    def fake_search(
+        query: str,
+        limit: int,
+    ) -> list[RetrievedComplaint]:
+        assert query == "duplicate credit card transaction"
+        assert limit == 3
+
+        return [
+            create_result("Mortgage"),
+            create_result("Credit card"),
+        ]
+
+    summary = evaluate_retrieval(
+        cases=cases,
+        search=fake_search,
+        limit=3,
+    )
+
+    result = summary.results[0]
+
+    assert result.matched is True
+    assert result.first_relevant_rank == 2
+    assert result.reciprocal_rank == pytest.approx(0.5)
+    assert summary.mean_reciprocal_rank == pytest.approx(0.5)
