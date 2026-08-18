@@ -1,0 +1,16 @@
+{"query":"The same credit card purchase appears twice on my statement","expected_product":"Credit card"}
+{"query":"There is a card transaction from a merchant I do not recognize","expected_product":"Credit card"}
+{"query":"My card company refused to investigate an unauthorized purchase","expected_product":"Credit card"}
+{"query":"I returned an item but the refund never appeared on my credit card","expected_product":"Credit card"}
+{"query":"I was charged an unexpected cash advance fee on my card","expected_product":"Credit card"}
+{"query":"The merchant canceled my order but my credit card was still charged","expected_product":"Credit card"}
+{"query":"My credit card payment was made on time but I received a late fee","expected_product":"Credit card"}
+{"query":"My credit card dispute was closed without reviewing my documents","expected_product":"Credit card"}
+{"query":"My checking account has an unexpected monthly maintenance fee","expected_product":"Checking or savings account"}
+{"query":"The bank froze my checking account and I cannot access my money","expected_product":"Checking or savings account"}
+{"query":"An ATM withdrawal that I did not make appeared in my bank account","expected_product":"Checking or savings account"}
+{"query":"I was charged multiple overdraft fees after one small purchase","expected_product":"Checking or savings account"}
+{"query":"My paycheck direct deposit has not arrived in my checking account","expected_product":"Checking or savings account"}
+{"query":"A bank transfer is still pending and the money is unavailable","expected_product":"Checking or savings account"}
+{"query":"The bank closed my account without giving me an explanation","expected_product":"Checking or savings account"}
+{"query":"Money disappeared from my savings account after an electronic transfer","expected_product":"Checking or savings account"}
