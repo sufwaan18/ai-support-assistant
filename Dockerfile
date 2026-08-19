@@ -23,7 +23,7 @@ COPY app ./app
 RUN mkdir -p /app/data \
     && chown -R appuser:appgroup /app/data
 
-    ENV HOME=/app/data \
+ENV HOME=/app/data \
     HF_HOME=/app/data/huggingface
 
 USER appuser

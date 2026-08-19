@@ -93,6 +93,43 @@ aws ec2 stop-instances \
 
 Stopping the instance ends EC2 compute charges. EBS, ECR, and S3 continue to incur small storage charges.
 
+## Automated demo deployments
+
+The **Deploy demo to AWS** GitHub Actions workflow performs an intentional, manual deployment. It does not start a stopped EC2 instance. This prevents a code push from unexpectedly turning on billable demo infrastructure.
+
+The workflow:
+
+1. authenticates to AWS using GitHub OpenID Connect (OIDC), not stored AWS access keys;
+2. confirms EC2 is already running and online in Systems Manager;
+3. builds and pushes an immutable image tagged with the Git commit;
+4. deploys through Systems Manager without SSH;
+5. retrieves application secrets directly on EC2 from Parameter Store;
+6. verifies the `/health` endpoint; and
+7. automatically restores the previous image if the new container is unhealthy.
+
+Create a protected GitHub environment named `demo` and add these environment variables:
+
+| Variable | Example purpose |
+| --- | --- |
+| `AWS_ROLE_ARN` | IAM role trusted by this GitHub repository through OIDC |
+| `AWS_REGION` | `us-east-1` |
+| `ECR_REPOSITORY` | `ai-support-assistant` |
+| `EC2_INSTANCE_ID` | The demo server instance ID |
+| `OPENAI_API_KEY_PARAMETER` | Encrypted Parameter Store name for the OpenAI key |
+| `APP_API_KEY_PARAMETER` | Encrypted Parameter Store name for the application key |
+| `RAG_SNAPSHOT_S3_BUCKET` | Private bucket containing the ChromaDB snapshot |
+| `RAG_SNAPSHOT_S3_KEY` | Object key for the compressed snapshot |
+
+No secret values belong in these variables. The two key-related variables contain only Parameter Store names. Configure the `demo` environment with required reviewer approval if another person may operate the repository.
+
+To deploy:
+
+1. intentionally start the EC2 demo server;
+2. open **GitHub → Actions → Deploy demo to AWS**;
+3. choose **Run workflow**;
+4. enter `deploy` for confirmation; and
+5. review the deployment summary before using the demo.
+
 ## Estimated demo cost
 
 A `t3.medium` instance and public IPv4 address cost approximately five cents per running hour in `us-east-1`. A short demonstration should cost well below one dollar.

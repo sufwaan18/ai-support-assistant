@@ -1,0 +1,164 @@
+name: Deploy demo to AWS
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type deploy to confirm the demo server is already running
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: aws-demo-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build, deploy, and verify
+    if: inputs.confirmation == 'deploy'
+    runs-on: ubuntu-latest
+    environment: demo
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+      OPENAI_API_KEY_PARAMETER: ${{ vars.OPENAI_API_KEY_PARAMETER }}
+      APP_API_KEY_PARAMETER: ${{ vars.APP_API_KEY_PARAMETER }}
+      RAG_SNAPSHOT_S3_BUCKET: ${{ vars.RAG_SNAPSHOT_S3_BUCKET }}
+      RAG_SNAPSHOT_S3_KEY: ${{ vars.RAG_SNAPSHOT_S3_KEY }}
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Validate deployment settings
+        env:
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+        run: |
+          required=(
+            AWS_REGION
+            AWS_ROLE_ARN
+            ECR_REPOSITORY
+            EC2_INSTANCE_ID
+            OPENAI_API_KEY_PARAMETER
+            APP_API_KEY_PARAMETER
+            RAG_SNAPSHOT_S3_BUCKET
+            RAG_SNAPSHOT_S3_KEY
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing GitHub environment variable: ${name}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Authenticate to AWS with GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v6.2.3
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Confirm the server is running and managed
+        run: |
+          instance_state=$(aws ec2 describe-instances \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --query 'Reservations[0].Instances[0].State.Name' \
+            --output text)
+          if [[ "$instance_state" != "running" ]]; then
+            echo "The demo server is ${instance_state}. Start it intentionally before deploying." >&2
+            exit 1
+          fi
+
+          ping_status=$(aws ssm describe-instance-information \
+            --filters "Key=InstanceIds,Values=${EC2_INSTANCE_ID}" \
+            --query 'InstanceInformationList[0].PingStatus' \
+            --output text)
+          if [[ "$ping_status" != "Online" ]]; then
+            echo "The demo server is not online in Systems Manager." >&2
+            exit 1
+          fi
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2.1.6
+
+      - name: Build and push an immutable image
+        id: image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          image_tag="sha-${GITHUB_SHA::12}"
+          image_uri="${ECR_REGISTRY}/${ECR_REPOSITORY}:${image_tag}"
+          docker build --tag "$image_uri" .
+          docker push "$image_uri"
+          echo "uri=${image_uri}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare the Systems Manager command
+        run: |
+          python scripts/render_ssm_command.py \
+            --script scripts/deploy_ec2.sh \
+            --output /tmp/ssm-parameters.json \
+            --image-uri "${{ steps.image.outputs.uri }}" \
+            --openai-api-key-parameter "$OPENAI_API_KEY_PARAMETER" \
+            --app-api-key-parameter "$APP_API_KEY_PARAMETER" \
+            --rag-snapshot-s3-bucket "$RAG_SNAPSHOT_S3_BUCKET" \
+            --rag-snapshot-s3-key "$RAG_SNAPSHOT_S3_KEY"
+
+      - name: Deploy through AWS Systems Manager
+        id: deploy
+        run: |
+          command_id=$(aws ssm send-command \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --comment "Deploy AI Support Assistant ${GITHUB_SHA::12}" \
+            --parameters file:///tmp/ssm-parameters.json \
+            --query 'Command.CommandId' \
+            --output text)
+          echo "command_id=${command_id}" >> "$GITHUB_OUTPUT"
+
+          set +e
+          aws ssm wait command-executed \
+            --command-id "$command_id" \
+            --instance-id "$EC2_INSTANCE_ID"
+          wait_result=$?
+          set -e
+
+          aws ssm get-command-invocation \
+            --command-id "$command_id" \
+            --instance-id "$EC2_INSTANCE_ID" \
+            --query '{Status:Status,Output:StandardOutputContent,Errors:StandardErrorContent}' \
+            --output json
+
+          status=$(aws ssm get-command-invocation \
+            --command-id "$command_id" \
+            --instance-id "$EC2_INSTANCE_ID" \
+            --query 'Status' \
+            --output text)
+          if [[ "$wait_result" -ne 0 || "$status" != "Success" ]]; then
+            echo "Deployment failed with Systems Manager status: ${status}" >&2
+            exit 1
+          fi
+
+      - name: Publish the verified latest tag
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_URI: ${{ steps.image.outputs.uri }}
+        run: |
+          latest_uri="${ECR_REGISTRY}/${ECR_REPOSITORY}:latest"
+          docker tag "$IMAGE_URI" "$latest_uri"
+          docker push "$latest_uri"
+
+      - name: Summarize the deployment
+        run: |
+          {
+            echo "## AWS demo deployment succeeded"
+            echo
+            echo "- Image: \`${{ steps.image.outputs.uri }}\`"
+            echo "- Instance: \`${EC2_INSTANCE_ID}\`"
+            echo "- SSM command: \`${{ steps.deploy.outputs.command_id }}\`"
+            echo "- Health check: passed"
+          } >> "$GITHUB_STEP_SUMMARY"
