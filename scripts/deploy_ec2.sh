@@ -3,8 +3,10 @@
 set -Eeuo pipefail
 
 CONTAINER_NAME="ai-support-assistant"
+CADDY_CONTAINER_NAME="tytus-caddy"
 DATA_DIRECTORY="/opt/ai-support-assistant/data"
 ENVIRONMENT_FILE="/opt/ai-support-assistant/app.env"
+CADDY_DIRECTORY="/opt/ai-support-assistant/caddy"
 
 required_variables=(
   IMAGE_URI
@@ -79,11 +81,29 @@ start_application() {
   docker run --detach \
     --name "$CONTAINER_NAME" \
     --restart unless-stopped \
-    --publish 80:8000 \
-    --publish 8000:8000 \
+    --publish 127.0.0.1:8000:8000 \
     --env-file "$ENVIRONMENT_FILE" \
     --volume "${DATA_DIRECTORY}:/app/data" \
     "$image_uri"
+}
+
+start_https_proxy() {
+  install -d -m 0755 "$CADDY_DIRECTORY"
+  cat > "${CADDY_DIRECTORY}/Caddyfile" <<'EOF'
+sufwaan.shop, www.sufwaan.shop {
+  reverse_proxy 127.0.0.1:8000
+}
+EOF
+
+  docker rm --force "$CADDY_CONTAINER_NAME" >/dev/null 2>&1 || true
+  docker run --detach \
+    --name "$CADDY_CONTAINER_NAME" \
+    --restart unless-stopped \
+    --network host \
+    --volume "${CADDY_DIRECTORY}/Caddyfile:/etc/caddy/Caddyfile:ro" \
+    --volume caddy_data:/data \
+    --volume caddy_config:/config \
+    caddy:2-alpine
 }
 
 wait_for_health() {
@@ -105,6 +125,7 @@ wait_for_health() {
 start_application "$IMAGE_URI"
 
 if wait_for_health; then
+  start_https_proxy
   echo "Deployment succeeded: ${IMAGE_URI}"
   exit 0
 fi
