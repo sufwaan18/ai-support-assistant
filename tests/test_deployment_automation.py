@@ -8,6 +8,7 @@ from scripts.render_ssm_command import render_command
 
 
 PROJECT_ROOT = Path(__file__).parent.parent
+WORKFLOW_PATH = PROJECT_ROOT / ".github" / "workflows" / "deploy.yml"
 
 
 def test_deployment_script_has_valid_bash_syntax() -> None:
@@ -20,6 +21,16 @@ def test_deployment_script_has_valid_bash_syntax() -> None:
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_workflow_uses_oidc_without_stored_aws_credentials() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "id-token: write" in workflow
+    assert "AI-Support-Assistant-GitHub-Deploy" in workflow
+    assert "AWS_ACCESS_KEY_ID" not in workflow
+    assert "AWS_SECRET_ACCESS_KEY" not in workflow
+    assert "secrets.OPENAI_API_KEY" not in workflow
 
 
 def test_render_command_quotes_deployment_values() -> None:
