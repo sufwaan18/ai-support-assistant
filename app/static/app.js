@@ -10,8 +10,35 @@ const accessError = document.querySelector("#access-error");
 const chatApp = document.querySelector("#chat-app");
 const endSessionButton = document.querySelector("#end-session");
 const sessionBrand = document.querySelector("#session-brand");
+const voiceButton = document.querySelector("#voice-button");
 const conversationHistory = [];
 let sessionTimer;
+
+function syncComposerPrompt() {
+  messageInput.closest(".message-row").classList.toggle("has-value", Boolean(messageInput.value.trim()));
+}
+
+messageInput.addEventListener("input", syncComposerPrompt);
+
+voiceButton.addEventListener("click", () => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showError("Voice input is not supported in this browser.");
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.addEventListener("start", () => voiceButton.classList.add("listening"));
+  recognition.addEventListener("end", () => voiceButton.classList.remove("listening"));
+  recognition.addEventListener("result", (event) => {
+    messageInput.value = event.results[0][0].transcript;
+    syncComposerPrompt();
+    messageInput.focus();
+  });
+  recognition.start();
+});
 
 function lockChat(message = "Your five-minute access session has expired.") {
   window.clearTimeout(sessionTimer);
@@ -37,8 +64,8 @@ sessionBrand.addEventListener("click", () => {
   chatThread.querySelectorAll(".chat-message").forEach((item) => item.remove());
   errorMessage.hidden = true;
   messageInput.value = "";
+  syncComposerPrompt();
   chatThread.scrollTop = 0;
-  messageInput.focus();
 });
 
 function scheduleSessionExpiry(seconds) {
@@ -52,6 +79,7 @@ function scheduleSessionExpiry(seconds) {
 document.querySelectorAll(".suggestions button").forEach((button) => {
   button.addEventListener("click", () => {
     messageInput.value = button.dataset.message;
+    syncComposerPrompt();
     messageInput.focus();
   });
 });
@@ -140,7 +168,6 @@ async function checkSession() {
   chatApp.hidden = !payload.authenticated;
   if (payload.authenticated) {
     scheduleSessionExpiry(payload.expires_in_seconds);
-    messageInput.focus();
   }
 }
 
@@ -158,7 +185,6 @@ accessForm.addEventListener("submit", async (event) => {
     accessGate.hidden = true;
     chatApp.hidden = false;
     scheduleSessionExpiry(payload.expires_in_seconds);
-    messageInput.focus();
   } catch (requestError) {
     accessError.textContent = requestError.message;
     accessError.hidden = false;
@@ -174,9 +200,10 @@ form.addEventListener("submit", async (event) => {
   chatApp.classList.add("conversation-started");
   addMessage("user", userMessage);
   messageInput.value = "";
+  syncComposerPrompt();
 
   submitButton.disabled = true;
-  submitButton.querySelector("span").textContent = "Thinking...";
+  submitButton.querySelector("span:last-child").textContent = "Thinking...";
 
   try {
     const response = await fetch("/rag/support", {
@@ -204,7 +231,7 @@ form.addEventListener("submit", async (event) => {
     showError(error.message);
   } finally {
     submitButton.disabled = false;
-    submitButton.querySelector("span").textContent = "Ask TyTus";
+    submitButton.querySelector("span:last-child").textContent = "Ask TyTus";
   }
 });
 
