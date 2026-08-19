@@ -79,6 +79,7 @@ start_application() {
   docker run --detach \
     --name "$CONTAINER_NAME" \
     --restart unless-stopped \
+    --publish 80:8000 \
     --publish 8000:8000 \
     --env-file "$ENVIRONMENT_FILE" \
     --volume "${DATA_DIRECTORY}:/app/data" \
