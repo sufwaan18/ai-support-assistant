@@ -23,6 +23,18 @@ def test_deployment_script_has_valid_bash_syntax() -> None:
     assert result.returncode == 0, result.stderr
 
 
+def test_deployment_refreshes_ecr_login_before_pull() -> None:
+    deployment_script = (
+        PROJECT_ROOT / "scripts" / "deploy_ec2.sh"
+    ).read_text(encoding="utf-8")
+
+    login_position = deployment_script.index("aws ecr get-login-password")
+    pull_position = deployment_script.index('docker pull "$IMAGE_URI"')
+
+    assert login_position < pull_position
+    assert "--password-stdin" in deployment_script
+
+
 def test_workflow_uses_oidc_without_stored_aws_credentials() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 

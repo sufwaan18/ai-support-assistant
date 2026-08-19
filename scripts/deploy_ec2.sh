@@ -45,6 +45,19 @@ printf '%s\n' \
   > "$ENVIRONMENT_FILE"
 unset openai_api_key app_api_key
 
+ecr_registry="${IMAGE_URI%%/*}"
+ecr_region=$(printf '%s' "$ecr_registry" | cut -d. -f4)
+
+if [[ -z "$ecr_registry" || -z "$ecr_region" ]]; then
+  echo "Unable to determine the ECR registry or region from IMAGE_URI." >&2
+  exit 1
+fi
+
+aws ecr get-login-password --region "$ecr_region" \
+  | docker login \
+    --username AWS \
+    --password-stdin "$ecr_registry"
+
 docker pull "$IMAGE_URI"
 
 app_uid=$(docker run --rm --entrypoint id "$IMAGE_URI" -u)
