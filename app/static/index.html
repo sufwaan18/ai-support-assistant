@@ -70,35 +70,36 @@
       </header>
 
       <main class="workspace">
-        <section class="hero" aria-labelledby="hero-title">
-          <p class="eyebrow">INTELLIGENCE THAT CONNECTS THE DOTS</p>
-          <h1 id="hero-title">How can <span>TyTus</span><br>help you?</h1>
-          <p class="hero-copy">
-            Ask about a banking or credit-card problem. TyTus searches real
-            consumer complaint patterns before composing a practical response.
-          </p>
-        </section>
-
         <section id="chat-thread" class="conversation" aria-live="polite">
           <div id="error-message" class="error-message" role="alert" hidden></div>
         </section>
 
         <section class="composer-section" aria-label="Ask TyTus">
+          <p class="eyebrow composer-eyebrow">INTELLIGENCE THAT CONNECTS THE DOTS</p>
           <form id="support-form" class="composer">
             <div class="message-row">
               <label class="sr-only" for="message">Describe your issue</label>
+              <div class="composer-prompt" aria-hidden="true">
+                How can <span>TyTus</span> help you today?
+              </div>
               <textarea
                 id="message"
                 name="message"
                 minlength="10"
                 maxlength="2000"
                 rows="2"
-                placeholder="How may I help you today?"
+                placeholder=""
                 required
               ></textarea>
+              <button id="voice-button" class="composer-icon-button voice-button" type="button" aria-label="Speak your question">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 15.4a3.4 3.4 0 0 0 3.4-3.4V6a3.4 3.4 0 1 0-6.8 0v6a3.4 3.4 0 0 0 3.4 3.4Z"></path>
+                  <path d="M18.5 11.5a6.5 6.5 0 0 1-13 0M12 18v3M9 21h6"></path>
+                </svg>
+              </button>
               <button id="submit-button" type="submit" aria-label="Send question">
+                <span class="submit-sparkle" aria-hidden="true">✦</span>
                 <span>Ask TyTus</span>
-                <span aria-hidden="true">&#8593;</span>
               </button>
             </div>
           </form>
@@ -118,6 +119,16 @@
       </main>
 
       <footer>
+        <a
+          class="creator-link"
+          href="https://www.linkedin.com/in/sufwaan-amees-7b0a291b4/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Open the creator's LinkedIn profile"
+        >
+          <span class="linkedin-mark" aria-hidden="true">in</span>
+          Creator's LinkedIn
+        </a>
         <span>TyTus.ai &middot; AI Support Assistant</span>
         <span>Responses are informational, not financial or legal advice.</span>
       </footer>
