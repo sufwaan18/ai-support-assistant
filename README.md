@@ -1,215 +1,168 @@
-# AI Support Assistant
+# Tytus.ai - AI Support Assistant
 
-A production-focused AI support application built with Python, FastAPI, Pydantic, and the OpenAI Responses API.
+I built this project to learn how a useful AI support tool works beyond a basic chat prompt. It takes a customer's question, finds similar complaints from the Consumer Financial Protection Bureau (CFPB), and uses that information to draft a response.
 
-## Current features
+The answer includes the complaint records that were used as sources. The app also checks the citations before returning the answer, so the model cannot cite a complaint that was not found during the search.
 
-- Health-check API endpoint
-- Validated support-request endpoint
-- AI-generated support-reply endpoint
-- Typed environment configuration
-- OpenAI service layer
-- Automated API and service tests
-- Mocked OpenAI tests that avoid network calls and API charges
+The live browser version is called Tytus.ai and is available at
+`https://sufwaan.shop`.
 
-## Project structure
+## What it can do
 
-```text
-ai-support-assistant/
-├── app/
-│   ├── __init__.py
-│   ├── ai_service.py
-│   ├── config.py
-│   ├── main.py
-│   └── models.py
-├── tests/
-│   ├── __init__.py
-│   ├── test_ai_service.py
-│   ├── test_config.py
-│   ├── test_health.py
-│   └── test_support.py
-├── .env.example
-├── .gitignore
-├── README.md
-└── requirements.txt
-```
+- Answer financial support questions through a simple chat page
+- Search CFPB complaint data for useful context
+- Show the complaint IDs and details used for an answer
+- Check that citations match the retrieved records
+- Accept voice input in supported browsers
+- Protect the demo with short-lived access codes and sessions
+- Limit AI requests to reduce misuse and unexpected API costs
+- Measure retrieval and answer quality with local evaluation scripts
+- Run locally, with Docker, or on an AWS EC2 instance
 
-## Requirements
+## How it works
 
-- Python 3.11 or newer
-- An OpenAI API key for real AI requests
+When a user sends a question, Sentence Transformers turns the text into an embedding. ChromaDB compares that embedding with the saved complaint records and returns the closest matches. Those records are added to the prompt sent to OpenAI.
 
-## Local setup
+The model is told to use only the supplied records and to avoid making legal or financial claims. Before the API sends the response back, it checks that every complaint ID in the answer belongs to one of the retrieved records.
 
-Create a virtual environment:
+## Main tools
+
+- Python and FastAPI for the API
+- Pydantic for settings and request validation
+- OpenAI Responses API for drafting replies
+- Sentence Transformers for embeddings
+- ChromaDB for local vector search
+- HTML, CSS, and JavaScript for the browser interface
+- pytest for testing
+- Docker and Docker Compose for containers
+- GitHub Actions for tests and deployment
+- AWS EC2, ECR, S3, Systems Manager, IAM, and Parameter Store for the demo deployment
+
+## Run the project locally
+
+You need Python 3.11 or newer and an OpenAI API key.
+
+Create and activate a virtual environment:
 
 ```bash
 python3 -m venv .venv
-```
-
-Activate it on macOS or Linux:
-
-```bash
 source .venv/bin/activate
 ```
 
-Install dependencies:
+Install the packages:
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-## Environment configuration
-
-Copy the example environment file:
+Copy the example settings file:
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and replace the placeholder API key:
+Add your own values to `.env`:
 
 ```dotenv
-ENVIRONMENT=development
 APP_API_KEY=replace-with-a-long-random-value
 OPENAI_API_KEY=replace-with-your-key
 OPENAI_MODEL=gpt-5.6-luna
+RAG_DATABASE_DIRECTORY=data/chroma
+AI_RATE_LIMIT_REQUESTS=10
+AI_RATE_LIMIT_WINDOW_SECONDS=60
 ```
 
-`APP_API_KEY` protects endpoints that can consume paid AI resources. Clients
-must send this value in the `X-API-Key` request header. Use a different,
-random value for each deployed environment.
+Do not commit the `.env` file. It contains values that should stay private.
 
-Never commit `.env` or expose a real API key in source code, screenshots,
-logs, or GitHub.
+## Prepare the complaint data
 
-## Run locally
+Download and clean up to 5,000 CFPB complaints:
 
-Start the development server:
+```bash
+python -m app.ingestion.cli
+```
+
+Build the local ChromaDB index:
+
+```bash
+python -m app.index_cli
+```
+
+The first indexing run may take longer because the embedding model has to be downloaded.
+
+## Start the app
+
+Run the development server:
 
 ```bash
 python -m uvicorn app.main:app --reload
 ```
 
-The API will be available at:
+Open `http://127.0.0.1:8000` for the chat page or `http://127.0.0.1:8000/docs` for the API documentation.
 
-```text
-http://127.0.0.1:8000
+The chat page uses a six-digit access code. Open `http://127.0.0.1:8000/admin`, enter the `APP_API_KEY` from your `.env` file, and generate a code. Each code can be used once and expires after five minutes.
+
+## Run with Docker
+
+After creating `.env`, run:
+
+```bash
+docker compose up --build
 ```
 
-Interactive API documentation:
+The app will be available at `http://127.0.0.1:8000`.
 
-```text
-http://127.0.0.1:8000/docs
+## API routes
+
+The main routes are:
+
+- `GET /health` checks whether the API is running
+- `POST /access/codes` creates a demo access code
+- `POST /access/verify` exchanges a code for a browser session
+- `POST /access/logout` ends the current session
+- `POST /support/reply` creates a regular AI reply
+- `POST /rag/support` creates a reply based on CFPB complaint data
+
+The reply routes can use OpenAI credits. They require a valid browser session and are rate limited.
+
+## Check retrieval quality
+
+This command tests whether the search returns the expected type of complaint. The report includes recall at K and mean reciprocal rank.
+
+```bash
+python -m app.evaluate_cli
 ```
 
-## API endpoints
+The result is saved to `data/processed/retrieval_evaluation.json`.
 
-### Health check
+## Check answer quality
 
-```http
-GET /health
-```
-
-Example response:
-
-```json
-{
-  "status": "healthy"
-}
-```
-
-### Submit a support request
-
-```http
-POST /support
-```
-
-Example request:
-
-```json
-{
-  "subject": "Cannot reset password",
-  "message": "The password reset email never arrives."
-}
-```
-
-Example response:
-
-```json
-{
-  "status": "received",
-  "subject": "Cannot reset password"
-}
-```
-
-### Generate an AI support reply
-
-```http
-POST /support/reply
-X-API-Key: your-application-api-key
-```
-
-Example request:
-
-```json
-{
-  "subject": "Cannot reset password",
-  "message": "The password reset email never arrives."
-}
-```
-
-Example response:
-
-```json
-{
-  "status": "completed",
-  "subject": "Cannot reset password",
-  "reply": "Please check your spam folder and request a new reset email."
-}
-```
-
-This endpoint may use OpenAI API credits when called without a mocked client.
-Requests with a missing or incorrect application API key receive `401
-Unauthorized`.
-
-## Evaluate answer quality
-
-Run the deterministic answer-quality evaluation:
+This evaluation checks groundedness, citations, relevance, and safety. It uses saved examples and does not call OpenAI.
 
 ```bash
 python -m app.answer_evaluate_cli
 ```
 
-The evaluation dataset includes both acceptable and deliberately defective
-answers. It measures groundedness, citation integrity, relevance, and safety,
-then writes a detailed report to
-`data/processed/answer_quality_evaluation.json`. The command does not call the
-OpenAI API, so it is safe to run locally and in continuous integration without
-API charges.
+The result is saved to `data/processed/answer_quality_evaluation.json`.
 
-## Run tests
+## Run the tests
 
 ```bash
 python -m pytest -v
 ```
 
-The OpenAI integration is mocked during automated tests, so the test suite does not make real API calls.
+OpenAI calls are mocked in the test suite, so running the tests does not use API credits.
 
-## Technology stack
+## Live AWS deployment
 
-- Python
-- FastAPI
-- Pydantic
-- pytest
-- OpenAI Python SDK
-- Uvicorn
+The live version runs in a Docker container on EC2. Caddy handles HTTPS and sends requests to the FastAPI container. The application image is stored in ECR, and the ChromaDB snapshot is stored in a private S3 bucket. Secrets are read from Parameter Store instead of being saved in the repository or container image.
 
-## Planned additions
+Deployment is started manually through GitHub Actions. It uses GitHub OIDC to connect to AWS, deploys through Systems Manager without SSH, checks the health route, and restores the previous image if the new version does not start correctly.
 
-- Sentence Transformers
-- ChromaDB
-- LangChain
-- Docker
-- GitHub Actions
-- AWS deployment
+More setup and operating notes are in [the AWS deployment guide](docs/aws-deployment.md).
+
+## Current limits
+
+This is a portfolio project and not a replacement for a real customer support team. CFPB complaints are submitted by consumers and are not verified facts. The generated replies are for general information only and should not be treated as financial or legal advice.
+
+The application has HTTPS and a custom domain. Longer-term monitoring and infrastructure as code would be useful additions before treating it as a larger public service.
